@@ -1,0 +1,35 @@
+From f297e86c7f017430816b27e6cf29bf81246d897e Mon Sep 17 00:00:00 2001
+From: "Felipe F. Tonello" <eu@felipetonello.com>
+Date: Tue, 26 Jan 2016 14:52:36 +0100
+Subject: [PATCH] usb: gadget: f_midi: remove useless midi reference from port
+ struct
+
+remove a field which is unnecessary. No functional changes.
+
+Signed-off-by: Felipe F. Tonello <eu@felipetonello.com>
+Signed-off-by: Michal Nazarewicz <mina86@mina86.com>
+Signed-off-by: Felipe Balbi <balbi@kernel.org>
+---
+ drivers/usb/gadget/function/f_midi.c | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/drivers/usb/gadget/function/f_midi.c b/drivers/usb/gadget/function/f_midi.c
+index fb1fe96d32153..cd160e79b777e 100644
+--- a/drivers/usb/gadget/function/f_midi.c
++++ b/drivers/usb/gadget/function/f_midi.c
+@@ -56,7 +56,6 @@ static const char f_midi_longname[] = "MIDI Gadget";
+  * USB <- IN endpoint  <- rawmidi
+  */
+ struct gmidi_in_port {
+-	struct f_midi *midi;
+ 	int active;
+ 	uint8_t cable;
+ 	uint8_t state;
+@@ -1192,7 +1191,6 @@ static struct usb_function *f_midi_alloc(struct usb_function_instance *fi)
+ 			goto setup_fail;
+ 		}
+ 
+-		port->midi = midi;
+ 		port->active = 0;
+ 		port->cable = i;
+ 		midi->in_port[i] = port;

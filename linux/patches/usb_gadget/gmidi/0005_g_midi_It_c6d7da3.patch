@@ -1,0 +1,151 @@
+From c6d7da3cf31337f3cc6a89b0306f783476e827ab Mon Sep 17 00:00:00 2001
+From: Enrico Alessio Romeo <romeo@korg.it>
+Date: Wed, 15 Nov 2017 18:16:50 +0100
+Subject: [PATCH] gmidi: Add Jack IN/OUT strings configuration from module
+ params
+
+---
+ drivers/usb/gadget/function/f_midi.c | 28 +++++++++++++++++++++++-----
+ drivers/usb/gadget/function/u_midi.h |  3 ++-
+ drivers/usb/gadget/legacy/gmidi.c    | 10 ++++++++++
+ 3 files changed, 35 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/usb/gadget/function/f_midi.c b/drivers/usb/gadget/function/f_midi.c
+index a68b26666b3f..dfb9a3020e85 100644
+--- a/drivers/usb/gadget/function/f_midi.c
++++ b/drivers/usb/gadget/function/f_midi.c
+@@ -205,9 +205,16 @@ static struct usb_ms_endpoint_descriptor_16 ms_in_desc = {
+ /* string IDs are assigned dynamically */
+ 
+ #define STRING_FUNC_IDX			0
++#define MIDI_IN_JACK_IDX		1
++#define MIDI_OUT_JACK_IDX		2
++
++static char jack_in_string[32] = "Generic USB MIDI Sound";
++static char jack_out_string[32] = "Generic USB MIDI Keyboard";
+ 
+ static struct usb_string midi_string_defs[] = {
+-	[STRING_FUNC_IDX].s = "MIDI function",
++	[STRING_FUNC_IDX].s = "Generic USB MIDI",
++	[MIDI_IN_JACK_IDX].s = jack_in_string,
++	[MIDI_OUT_JACK_IDX].s = jack_out_string,
+ 	{  } /* end of list */
+ };
+ 
+@@ -996,6 +1003,8 @@ static int f_midi_bind(struct usb_configuration *c, struct usb_function *f)
+ 	}
+ 	ac_interface_desc.iInterface = us[STRING_FUNC_IDX].id;
+ 
++	//klt_usb_midi_message("%s",us[STRING_FUNC_IDX].s);
++
+ 	/* We have two interfaces, AudioControl and MIDIStreaming */
+ 	status = usb_interface_id(c, f);
+ 	if (status < 0)
+@@ -1060,7 +1069,7 @@ static int f_midi_bind(struct usb_configuration *c, struct usb_function *f)
+ 		in_ext->bDescriptorSubtype	= USB_MS_MIDI_IN_JACK;
+ 		in_ext->bJackType		= USB_MS_EXTERNAL;
+ 		in_ext->bJackID			= jack++;
+-		in_ext->iJack			= 0;
++		in_ext->iJack			=  0;
+ 		midi_function[i++] = (struct usb_descriptor_header *) in_ext;
+ 
+ 		out_emb->bLength		= USB_DT_MIDI_OUT_SIZE(1);
+@@ -1071,7 +1080,7 @@ static int f_midi_bind(struct usb_configuration *c, struct usb_function *f)
+ 		out_emb->bNrInputPins		= 1;
+ 		out_emb->pins[0].baSourcePin	= 1;
+ 		out_emb->pins[0].baSourceID	= in_ext->bJackID;
+-		out_emb->iJack			= 0;
++		out_emb->iJack			=  us[MIDI_OUT_JACK_IDX].id;
+ 		midi_function[i++] = (struct usb_descriptor_header *) out_emb;
+ 
+ 		/* link it to the endpoint */
+@@ -1088,7 +1097,7 @@ static int f_midi_bind(struct usb_configuration *c, struct usb_function *f)
+ 		in_emb->bDescriptorSubtype	= USB_MS_MIDI_IN_JACK;
+ 		in_emb->bJackType		= USB_MS_EMBEDDED;
+ 		in_emb->bJackID			= jack++;
+-		in_emb->iJack			= 0;
++		in_emb->iJack			=  us[MIDI_IN_JACK_IDX].id;
+ 		midi_function[i++] = (struct usb_descriptor_header *) in_emb;
+ 
+ 		out_ext->bLength =		USB_DT_MIDI_OUT_SIZE(1);
+@@ -1097,7 +1106,7 @@ static int f_midi_bind(struct usb_configuration *c, struct usb_function *f)
+ 		out_ext->bJackType =		USB_MS_EXTERNAL;
+ 		out_ext->bJackID =		jack++;
+ 		out_ext->bNrInputPins =		1;
+-		out_ext->iJack =		0;
++		out_ext->iJack =		 0;
+ 		out_ext->pins[0].baSourceID =	in_emb->bJackID;
+ 		out_ext->pins[0].baSourcePin =	1;
+ 		midi_function[i++] = (struct usb_descriptor_header *) out_ext;
+@@ -1226,6 +1235,7 @@ F_MIDI_OPT(h_activity_timeout, false, 0);
+ F_MIDI_OPT(in_ports, true, MAX_PORTS);
+ F_MIDI_OPT(out_ports, true, MAX_PORTS);
+ 
++
+ static ssize_t f_midi_opts_id_show(struct config_item *item, char *page)
+ {
+ 	struct f_midi_opts *opts = to_f_midi_opts(item);
+@@ -1319,6 +1329,8 @@ static struct usb_function_instance *f_midi_alloc_inst(void)
+ 	opts->h_activity_timeout = 1000;
+ 	opts->in_ports = 1;
+ 	opts->out_ports = 1;
++	opts->jack_in_string = 0;
++	opts->jack_out_string = 0;
+ 
+ 	config_group_init_type_name(&opts->func_inst.group, "",
+ 				    &midi_func_type);
+@@ -1404,6 +1416,12 @@ static struct usb_function *f_midi_alloc(struct usb_function_instance *fi)
+ 	midi->host_activity_timeout = opts->h_activity_timeout;
+ 	midi->in_last_port = 0;
+ 
++	if(opts->jack_in_string)
++		strncpy(jack_in_string,opts->jack_in_string,sizeof(jack_in_string));
++
++	if(opts->jack_out_string)
++		strncpy(jack_out_string,opts->jack_out_string,sizeof(jack_out_string));
++
+ 	status = kfifo_alloc(&midi->in_req_fifo, midi->qlen, GFP_KERNEL);
+ 	if (status)
+ 		goto setup_fail;
+diff --git a/drivers/usb/gadget/function/u_midi.h b/drivers/usb/gadget/function/u_midi.h
+index 933d2da1ba32..e3cc8bd7bc1d 100644
+--- a/drivers/usb/gadget/function/u_midi.h
++++ b/drivers/usb/gadget/function/u_midi.h
+@@ -28,7 +28,8 @@ struct f_midi_opts {
+ 	unsigned int			buflen;
+ 	unsigned int			qlen;
+ 	u32				h_activity_timeout;
+-
++	char				*jack_in_string;
++	char				*jack_out_string;
+ 	/*
+ 	 * Protect the data form concurrent access by read/write
+ 	 * and create symlink/remove symlink.
+diff --git a/drivers/usb/gadget/legacy/gmidi.c b/drivers/usb/gadget/legacy/gmidi.c
+index 0bf39c3ccdb1..1fa9a8184649 100644
+--- a/drivers/usb/gadget/legacy/gmidi.c
++++ b/drivers/usb/gadget/legacy/gmidi.c
+@@ -63,6 +63,14 @@ static unsigned int out_ports = 1;
+ module_param(out_ports, uint, S_IRUGO);
+ MODULE_PARM_DESC(out_ports, "Number of MIDI output ports");
+ 
++static char *iJackin = 0;
++module_param(iJackin, charp, S_IRUGO);
++MODULE_PARM_DESC(iJackin, "USB Jack-In string");
++
++static char *iJackout = 0;
++module_param(iJackout, charp, S_IRUGO);
++MODULE_PARM_DESC(iJackout, "USB Jack-Out string");
++
+ /* Thanks to Grey Innovation for donating this product ID.
+  *
+  * DO NOT REUSE THESE IDs with a protocol-incompatible driver!!  Ever!!
+@@ -156,6 +164,8 @@ static int midi_bind(struct usb_composite_dev *cdev)
+ 	midi_opts->out_ports = out_ports;
+ 	midi_opts->buflen = buflen;
+ 	midi_opts->qlen = qlen;
++	midi_opts->jack_in_string = iJackin;
++	midi_opts->jack_out_string = iJackout;
+ 
+ 	status = usb_string_ids_tab(cdev, strings_dev);
+ 	if (status < 0)

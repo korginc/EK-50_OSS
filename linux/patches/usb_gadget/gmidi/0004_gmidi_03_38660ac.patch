@@ -1,0 +1,46 @@
+From 38660ac7beb53b5f7bdb1d325a93c70cb7ba429f Mon Sep 17 00:00:00 2001
+From: "Felipe F. Tonello" <eu@felipetonello.com>
+Date: Tue, 10 Nov 2015 17:52:07 +0000
+Subject: [PATCH] usb: gadget: gmidi: Cleanup legacy code
+
+Remove unnecessary headers and variables.
+
+Reviewed-by: Robert Baldyga <r.baldyga@samsung.com>
+Signed-off-by: Felipe F. Tonello <eu@felipetonello.com>
+Signed-off-by: Felipe Balbi <balbi@ti.com>
+---
+ drivers/usb/gadget/legacy/gmidi.c | 8 --------
+ 1 file changed, 8 deletions(-)
+
+diff --git a/drivers/usb/gadget/legacy/gmidi.c b/drivers/usb/gadget/legacy/gmidi.c
+index 8a18348ae86ee..be8e91d68e146 100644
+--- a/drivers/usb/gadget/legacy/gmidi.c
++++ b/drivers/usb/gadget/legacy/gmidi.c
+@@ -21,19 +21,12 @@
+ /* #define VERBOSE_DEBUG */
+ 
+ #include <linux/kernel.h>
+-#include <linux/slab.h>
+ #include <linux/module.h>
+-#include <linux/device.h>
+ 
+-#include <sound/core.h>
+ #include <sound/initval.h>
+-#include <sound/rawmidi.h>
+ 
+-#include <linux/usb/ch9.h>
+ #include <linux/usb/composite.h>
+ #include <linux/usb/gadget.h>
+-#include <linux/usb/audio.h>
+-#include <linux/usb/midi.h>
+ 
+ #include "u_midi.h"
+ 
+@@ -42,7 +35,6 @@
+ MODULE_AUTHOR("Ben Williamson");
+ MODULE_LICENSE("GPL v2");
+ 
+-static const char shortname[] = "g_midi";
+ static const char longname[] = "MIDI Gadget";
+ 
+ USB_GADGET_COMPOSITE_OPTIONS();

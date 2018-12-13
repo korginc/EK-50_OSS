@@ -1,0 +1,46 @@
+From 919de443c2acd9fbd691ea0ed7d1ad858e5f8bed Mon Sep 17 00:00:00 2001
+From: "Felipe F. Tonello" <eu@felipetonello.com>
+Date: Tue, 1 Dec 2015 18:31:00 +0000
+Subject: [PATCH] usb: gadget: f_midi: set altsettings only for MIDIStreaming
+ interface
+
+This avoids duplication of USB requests for OUT endpoint and
+re-enabling endpoints.
+
+Signed-off-by: Felipe F. Tonello <eu@felipetonello.com>
+Signed-off-by: Felipe Balbi <balbi@ti.com>
+---
+ drivers/usb/gadget/function/f_midi.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/usb/gadget/function/f_midi.c b/drivers/usb/gadget/function/f_midi.c
+index 29bfca1a47bb3..e804231bd8e59 100644
+--- a/drivers/usb/gadget/function/f_midi.c
++++ b/drivers/usb/gadget/function/f_midi.c
+@@ -75,6 +75,7 @@ struct f_midi {
+ 	struct usb_ep		*in_ep, *out_ep;
+ 	struct snd_card		*card;
+ 	struct snd_rawmidi	*rmidi;
++	u8			ms_id;
+ 
+ 	struct snd_rawmidi_substream *in_substream[MAX_PORTS];
+ 	struct snd_rawmidi_substream *out_substream[MAX_PORTS];
+@@ -321,8 +322,8 @@ static int f_midi_set_alt(struct usb_function *f, unsigned intf, unsigned alt)
+ 	unsigned i;
+ 	int err;
+ 
+-	/* For Control Device interface we do nothing */
+-	if (intf == 0)
++	/* we only set alt for MIDIStreaming interface */
++	if (intf != midi->ms_id)
+ 		return 0;
+ 
+ 	err = f_midi_start_ep(midi, f, midi->in_ep);
+@@ -730,6 +731,7 @@ static int f_midi_bind(struct usb_configuration *c, struct usb_function *f)
+ 		goto fail;
+ 	ms_interface_desc.bInterfaceNumber = status;
+ 	ac_header_desc.baInterfaceNr[0] = status;
++	midi->ms_id = status;
+ 
+ 	status = -ENODEV;
+ 

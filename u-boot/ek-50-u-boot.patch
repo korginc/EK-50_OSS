@@ -1,0 +1,551 @@
+diff --git a/include/configs/mx6_common.h b/include/configs/mx6_common.h
+index f668899..e819543 100644
+--- a/include/configs/mx6_common.h
++++ b/include/configs/mx6_common.h
+@@ -77,7 +77,7 @@ defined(CONFIG_MX6DL)) && !defined(CONFIG_MX6SOLO)
+ #define CONFIG_SYS_LOAD_ADDR	CONFIG_LOADADDR
+ 
+ #ifndef CONFIG_BOOTDELAY
+-#define CONFIG_BOOTDELAY	3
++#define CONFIG_BOOTDELAY	0
+ #endif
+ 
+ /* allow to overwrite serial and ethaddr */
+
+--- a/arch/arm/imx-common/cpu.c
++++ b/arch/arm/imx-common/cpu.c
+@@ -185,6 +185,28 @@ int print_cpuinfo(void)
+ 
+ 	cpurev = get_cpu_rev();
+ 
++
++	/* // get div value (saita add) */
++	/* struct mxc_ccm_reg *imx_ccm = (struct mxc_ccm_reg *)CCM_BASE_ADDR; */
++	/* volatile u32 pll_sys = imx_ccm->analog_pll_sys; */
++	/* volatile u32 clk_div_val = pll_sys &= 0b1111111; */
++	/* printf("CLOCK DIV = %d\n", clk_div_val); */
++	
++	/* volatile u32 reg = imx_ccm->analog_pll_sys; */
++	/* reg &= 0xFFFFFF80; // clear bottom 7 bits */
++	/* reg += 88; */
++	/* imx_ccm->analog_pll_sys = reg; */
++	
++	/* while (1) { */
++	/* 	reg = imx_ccm->analog_pll_sys; */
++	/* 	if (reg & 0x80000000) { */
++	/* 		break; */
++	/* 	} */
++	/* } */
++	/* pll_sys = imx_ccm->analog_pll_sys; */
++	/* clk_div_val = pll_sys &= 0b1111111; */
++	/* printf("CLOCK DIV = %d\n", clk_div_val); */
++	
+ #if defined(CONFIG_IMX_THERMAL)
+ 	struct udevice *thermal_dev;
+ 	int cpu_tmp, minc, maxc, ret;
+@@ -208,6 +230,27 @@ int print_cpuinfo(void)
+ 		mxc_get_clock(MXC_ARM_CLK) / 1000000);
+ #endif
+ 
++
++	// get div value 
++	struct mxc_ccm_reg *imx_ccm = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
++	volatile u32 pll_sys = imx_ccm->analog_pll_sys;
++	volatile u32 clk_div_val = pll_sys &= 0b1111111;
++	
++	volatile u32 reg = imx_ccm->analog_pll_sys;
++	reg &= 0xFFFFFF80; // clear bottom 7 bits
++	reg += 88;
++	imx_ccm->analog_pll_sys = reg;
++	
++	while (1) {
++		reg = imx_ccm->analog_pll_sys;
++		if (reg & 0x80000000) {
++			break;
++		}
++	}
++	pll_sys = imx_ccm->analog_pll_sys;
++	clk_div_val = pll_sys &= 0b1111111;
++	printf("CLOCK DIV = %d\n", clk_div_val);
++	
+ #if defined(CONFIG_IMX_THERMAL)
+ 	puts("CPU:   ");
+ 	switch (get_cpu_temp_grade(&minc, &maxc)) {
+diff --git a/board/freescale/mx6ullevk/imximage.cfg b/board/freescale/mx6ullevk/imximage.cfg
+index 4604b62..3815cbd 100644
+--- a/board/freescale/mx6ullevk/imximage.cfg
++++ b/board/freescale/mx6ullevk/imximage.cfg
+@@ -59,31 +59,33 @@ DATA 4 0x020c4078 0xffffffff
+ DATA 4 0x020c407c 0xffffffff
+ DATA 4 0x020c4080 0xffffffff
+ 
+-DATA 4 0x020E04B4 0x000C0000
+-DATA 4 0x020E04AC 0x00000000
+-DATA 4 0x020E027C 0x00000030
+-DATA 4 0x020E0250 0x00000030
+-DATA 4 0x020E024C 0x00000030
+-DATA 4 0x020E0490 0x00000030
+-DATA 4 0x020E0288 0x000C0030
++DATA 4 0x020E04B4 0x000C0000 	
++DATA 4 0x020E04AC 0x00000000    
++
++
++DATA 4 0x020E027C 0x00000028
++DATA 4 0x020E0250 0x00000028
++DATA 4 0x020E024C 0x00000028
++DATA 4 0x020E0490 0x00000028
++DATA 4 0x020E0288 0x000C0028
+ DATA 4 0x020E0270 0x00000000
+-DATA 4 0x020E0260 0x00000030
+-DATA 4 0x020E0264 0x00000030
+-DATA 4 0x020E04A0 0x00000030
++DATA 4 0x020E0260 0x00000028
++DATA 4 0x020E0264 0x00000028
++DATA 4 0x020E04A0 0x00000028
+ DATA 4 0x020E0494 0x00020000
+-DATA 4 0x020E0280 0x00000030
+-DATA 4 0x020E0284 0x00000030
++DATA 4 0x020E0280 0x00000028
++DATA 4 0x020E0284 0x00000028
+ DATA 4 0x020E04B0 0x00020000
+-DATA 4 0x020E0498 0x00000030
+-DATA 4 0x020E04A4 0x00000030
+-DATA 4 0x020E0244 0x00000030
+-DATA 4 0x020E0248 0x00000030
++DATA 4 0x020E0498 0x00000028
++DATA 4 0x020E04A4 0x00000028
++DATA 4 0x020E0244 0x00000028
++DATA 4 0x020E0248 0x00000028
+ DATA 4 0x021B001C 0x00008000
+ DATA 4 0x021B0800 0xA1390003
+ DATA 4 0x021B080C 0x00000004
+-DATA 4 0x021B083C 0x41640158
+-DATA 4 0x021B0848 0x40403237
+-DATA 4 0x021B0850 0x40403C33
++DATA 4 0x021B083C 0x00000000
++DATA 4 0x021B0848 0x40404040
++DATA 4 0x021B0850 0x40404040
+ DATA 4 0x021B081C 0x33333333
+ DATA 4 0x021B0820 0x33333333
+ DATA 4 0x021B082C 0xf3333333
+@@ -92,25 +94,36 @@ DATA 4 0x021B08C0 0x00944009
+ DATA 4 0x021B08b8 0x00000800
+ DATA 4 0x021B0004 0x0002002D
+ DATA 4 0x021B0008 0x1B333030
+-DATA 4 0x021B000C 0x676B52F3
++DATA 4 0x021B000C 0x3F4352F3
+ DATA 4 0x021B0010 0xB66D0B63
+ DATA 4 0x021B0014 0x01FF00DB
+-DATA 4 0x021B0018 0x00201740
++DATA 4 0x021B0018 0x00211740
+ DATA 4 0x021B001C 0x00008000
+ DATA 4 0x021B002C 0x000026D2
+-DATA 4 0x021B0030 0x006B1023
++DATA 4 0x021B0030 0x00431023
+ DATA 4 0x021B0040 0x0000004F
+-DATA 4 0x021B0000 0x84180000
++DATA 4 0x021B0000 0x83180000
+ DATA 4 0x021B0890 0x00400000
+ DATA 4 0x021B001C 0x02008032
+ DATA 4 0x021B001C 0x00008033
+ DATA 4 0x021B001C 0x00048031
+ DATA 4 0x021B001C 0x15208030
+ DATA 4 0x021B001C 0x04008040
+-DATA 4 0x021B0020 0x00000800
++DATA 4 0x021b001c 0x0200803A
++DATA 4 0x021b001c 0x0000803B
++DATA 4 0x021b001c 0x00048039
++DATA 4 0x021b001c 0x15208038
++DATA 4 0x021b001c 0x04008048
++DATA 4 0x021B0020 0x00007800
+ DATA 4 0x021B0818 0x00000227
+ DATA 4 0x021B0004 0x0002552D
+ DATA 4 0x021B0404 0x00011006
+ DATA 4 0x021B001C 0x00000000
+ 
++DATA 4 0x021b080c 0x00000000 
++DATA 4 0x021b0810 0x001E001E
++DATA 4 0x021b083c 0x01440144
++DATA 4 0x021b0840 0x00000000
++DATA 4 0x021b0848 0x4040282A
++DATA 4 0x021b0850 0x40403E38
+ #endif
+diff --git a/cmd/nand.c b/cmd/nand.c
+index a6b67e2..d5c6503 100644
+--- a/cmd/nand.c
++++ b/cmd/nand.c
+@@ -29,6 +29,9 @@
+ #include <jffs2/jffs2.h>
+ #include <nand.h>
+ 
++#define CONFIG_SYS_MAX_NAND_DEVICE	1
++#define CONFIG_SYS_NAND_BASE		0x40000000
++
+ #if defined(CONFIG_CMD_MTDPARTS)
+ 
+ /* partition handling routines */
+diff --git a/drivers/mtd/nand/mxs_nand.c b/drivers/mtd/nand/mxs_nand.c
+index 1cf3d11..e42e0f1 100644
+--- a/drivers/mtd/nand/mxs_nand.c
++++ b/drivers/mtd/nand/mxs_nand.c
+@@ -37,7 +37,11 @@
+ #endif
+ #define	MXS_NAND_METADATA_SIZE			10
+ #define	MXS_NAND_BITS_PER_ECC_LEVEL		13
++#if !defined(CONFIG_SYS_CACHELINE_SIZE) || CONFIG_SYS_CACHELINE_SIZE < 32
+ #define	MXS_NAND_COMMAND_BUFFER_SIZE		32
++#else
++#define	MXS_NAND_COMMAND_BUFFER_SIZE		CONFIG_SYS_CACHELINE_SIZE
++#endif
+ 
+ #define	MXS_NAND_BCH_TIMEOUT			10000
+ 
+diff --git a/drivers/mtd/nand/nand.c b/drivers/mtd/nand/nand.c
+index 8f0a921..45f4505 100644
+--- a/drivers/mtd/nand/nand.c
++++ b/drivers/mtd/nand/nand.c
+@@ -10,6 +10,9 @@
+ #include <nand.h>
+ #include <errno.h>
+ 
++#define CONFIG_SYS_MAX_NAND_DEVICE	1
++#define CONFIG_SYS_NAND_BASE		0x40000000
++
+ #ifndef CONFIG_SYS_NAND_BASE_LIST
+ #define CONFIG_SYS_NAND_BASE_LIST { CONFIG_SYS_NAND_BASE }
+ #endif
+diff --git a/drivers/usb/eth/usb_ether.c b/drivers/usb/eth/usb_ether.c
+index 36734e2..d6459a1 100644
+--- a/drivers/usb/eth/usb_ether.c
++++ b/drivers/usb/eth/usb_ether.c
+@@ -215,6 +215,7 @@ int is_eth_dev_on_usb_host(void)
+  */
+ static void probe_valid_drivers(struct usb_device *dev)
+ {
++#if 0
+ 	struct eth_device *eth;
+ 	int j;
+ 
+@@ -244,7 +245,8 @@ static void probe_valid_drivers(struct usb_device *dev)
+ 			break;
+ 			}
+ 		}
+-	}
++#endif
++}
+ 
+ /*******************************************************************************
+  * scan the usb and reports device info
+@@ -253,6 +255,9 @@ static void probe_valid_drivers(struct usb_device *dev)
+  */
+ int usb_host_eth_scan(int mode)
+ {
++	return 0;
++	
++#if 0
+ 	int i, old_async;
+ 
+ 	if (mode == 1)
+@@ -330,5 +335,6 @@ int usb_host_eth_scan(int mode)
+ 	if (usb_max_eth_dev > 0)
+ 		return 0;
+ 	return -1;
++#endif
+ }
+ #endif
+diff --git a/drivers/video/mxsfb.c b/drivers/video/mxsfb.c
+index 0ddb7b8..b3ac986 100644
+--- a/drivers/video/mxsfb.c
++++ b/drivers/video/mxsfb.c
+@@ -193,7 +193,6 @@ void *video_hw_init(void)
+ 	char *penv;
+ 	void *fb;
+ 	struct ctfb_res_modes mode;
+-
+ 	puts("Video: ");
+ 
+ 	if (!setup) {
+diff --git a/include/common.h b/include/common.h
+index cc3774f..691d438 100644
+--- a/include/common.h
++++ b/include/common.h
+@@ -93,7 +93,7 @@ typedef volatile unsigned char	vu_char;
+ #ifdef __LP64__
+ #define CONFIG_SYS_SUPPORT_64BIT_DATA
+ #endif
+-
++#define CONFIG_ZERO_BOOTDELAY_CHECK
+ #ifdef DEBUG
+ #define _DEBUG	1
+ #else
+diff --git a/include/configs/cgtqmx6eval.h b/include/configs/cgtqmx6eval.h
+index 487c011..089f489 100644
+--- a/include/configs/cgtqmx6eval.h
++++ b/include/configs/cgtqmx6eval.h
+@@ -158,7 +158,7 @@
+ 
+ #define CONFIG_MXC_UART_BASE	UART2_BASE
+ #define CONFIG_CONSOLE_DEV	"ttymxc1"
+-#define CONFIG_MMCROOT		"/dev/mmcblk0p2"
++#define CONFIG_MMCROOT		"/dev/mmcblk0p1"
+ #define CONFIG_SYS_MMC_ENV_DEV		0
+ 
+ #define CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
+diff --git a/include/configs/mx6sll_arm2.h b/include/configs/mx6sll_arm2.h
+index ca76972..dd9b439 100644
+--- a/include/configs/mx6sll_arm2.h
++++ b/include/configs/mx6sll_arm2.h
+@@ -172,7 +172,7 @@
+ /* Environment organization */
+ #define CONFIG_ENV_SIZE			SZ_8K
+ #define CONFIG_SYS_MMC_ENV_PART		0   /* user partition */
+-#define CONFIG_MMCROOT			"/dev/mmcblk0p2"  /* USDHC1 */
++#define CONFIG_MMCROOT			"/dev/mmcblk0p1"  /* USDHC1 */
+ 
+ #ifdef CONFIG_SYS_BOOT_SPINOR
+ #define CONFIG_SYS_USE_SPINOR
+diff --git a/include/configs/mx6sllevk.h b/include/configs/mx6sllevk.h
+index 8f57f59..d0d04fc 100644
+--- a/include/configs/mx6sllevk.h
++++ b/include/configs/mx6sllevk.h
+@@ -166,7 +166,7 @@
+ /* Environment organization */
+ #define CONFIG_ENV_SIZE			SZ_8K
+ #define CONFIG_SYS_MMC_ENV_PART		0   /* user partition */
+-#define CONFIG_MMCROOT			"/dev/mmcblk0p2"  /* USDHC1 */
++#define CONFIG_MMCROOT			"/dev/mmcblk0p1"  /* USDHC1 */
+ 
+ #define CONFIG_ENV_OFFSET		(12 * SZ_64K)
+ #define CONFIG_ENV_IS_IN_MMC
+diff --git a/include/configs/mx6ul_14x14_evk.h b/include/configs/mx6ul_14x14_evk.h
+index c2dad4f..7c6d60e 100644
+--- a/include/configs/mx6ul_14x14_evk.h
++++ b/include/configs/mx6ul_14x14_evk.h
+@@ -93,7 +93,7 @@
+ #define CONFIG_SYS_MMC_IMG_LOAD_PART	1
+ 
+ #ifdef CONFIG_SYS_BOOT_NAND
+-#define CONFIG_MFG_NAND_PARTITION "mtdparts=gpmi-nand:64m(boot),16m(kernel),16m(dtb),1m(misc),-(rootfs) "
++#define CONFIG_MFG_NAND_PARTITION "mtdparts=gpmi-nand:4m(boot),10m(kernel),1m(dtb),-(rootfs) "
+ #else
+ #define CONFIG_MFG_NAND_PARTITION ""
+ #endif
+@@ -101,7 +101,7 @@
+ #define CONFIG_MFG_ENV_SETTINGS \
+ 	"mfgtool_args=setenv bootargs console=${console},${baudrate} " \
+ 	    CONFIG_BOOTARGS_CMA_SIZE \
+-		"rdinit=/linuxrc " \
++		"rdinit=/linuxrc mem=256M" \
+ 		"g_mass_storage.stall=0 g_mass_storage.removable=1 " \
+ 		"g_mass_storage.file=/fat g_mass_storage.ro=1 " \
+ 		"g_mass_storage.idVendor=0x066F g_mass_storage.idProduct=0x37FF "\
+@@ -120,10 +120,10 @@
+ 	"fdt_addr=0x83000000\0" \
+ 	"fdt_high=0xffffffff\0"	  \
+ 	"console=ttymxc0\0" \
+-	"bootargs=console=ttymxc0,115200 ubi.mtd=4 "  \
++	"bootargs=console=ttymxc0,115200 ubi.mtd=3 "  \
+ 		"root=ubi0:rootfs rootfstype=ubifs "		     \
+ 		CONFIG_BOOTARGS_CMA_SIZE \
+-		"mtdparts=gpmi-nand:64m(boot),16m(kernel),16m(dtb),1m(misc),-(rootfs)\0"\
++		"mtdparts=gpmi-nand:4m(boot),10m(kernel),1m(dtb),-(rootfs)\0"\
+ 	"bootcmd=nand read ${loadaddr} 0x4000000 0x800000;"\
+ 		"nand read ${fdt_addr} 0x5000000 0x100000;"\
+ 		"bootz ${loadaddr} - ${fdt_addr}\0"
+@@ -244,6 +244,7 @@
+ 
+ /* FLASH and environment organization */
+ #define CONFIG_SYS_NO_FLASH
++#define CONFIG_SYS_USE_NAND //!< saita add 
+ 
+ #ifdef CONFIG_SYS_BOOT_QSPI
+ #define CONFIG_FSL_QSPI
+@@ -277,6 +278,7 @@
+ #endif
+ 
+ /* NAND stuff */
++#define CONFIG_SYS_USE_NAND
+ #ifdef CONFIG_SYS_USE_NAND
+ #define CONFIG_CMD_NAND
+ #define CONFIG_CMD_NAND_TRIMFFS
+diff --git a/include/configs/mx6ul_arm2.h b/include/configs/mx6ul_arm2.h
+index ed63849..203ee81 100644
+--- a/include/configs/mx6ul_arm2.h
++++ b/include/configs/mx6ul_arm2.h
+@@ -49,7 +49,7 @@
+ 
+ #define CONFIG_SYS_MMC_IMG_LOAD_PART	1
+ #ifdef CONFIG_SYS_BOOT_NAND
+-#define CONFIG_MFG_NAND_PARTITION "mtdparts=gpmi-nand:64m(boot),16m(kernel),16m(dtb),1m(misc),-(rootfs) "
++#define CONFIG_MFG_NAND_PARTITION "mtdparts=gpmi-nand:1m(boot),10m(kernel),1m(dtb),-(rootfs) "
+ #else
+ #define CONFIG_MFG_NAND_PARTITION ""
+ #endif
+@@ -64,7 +64,7 @@
+ #define CONFIG_MFG_ENV_SETTINGS \
+ 	"mfgtool_args=setenv bootargs console=${console},${baudrate} " \
+ 	    CONFIG_BOOTARGS_CMA_SIZE \
+-		"rdinit=/linuxrc " \
++		"rdinit=/linuxrc mem=256M" \
+ 		"g_mass_storage.stall=0 g_mass_storage.removable=1 " \
+ 		"g_mass_storage.file=/fat g_mass_storage.ro=1 " \
+ 		"g_mass_storage.idVendor=0x066F g_mass_storage.idProduct=0x37FF "\
+@@ -83,10 +83,10 @@
+ 	"fdt_addr=0x83000000\0" \
+ 	"fdt_high=0xffffffff\0"	  \
+ 	"console=ttymxc0\0" \
+-	"bootargs=console=ttymxc0,115200 ubi.mtd=4 "  \
++	"bootargs=console=ttymxc0,115200 ubi.mtd=3 "  \
+ 		"root=ubi0:rootfs rootfstype=ubifs "		     \
+ 		CONFIG_BOOTARGS_CMA_SIZE \
+-		"mtdparts=gpmi-nand:64m(boot),16m(kernel),16m(dtb),1m(misc),-(rootfs)\0"\
++		"mtdparts=gpmi-nand:1m(boot),10m(kernel),1m(dtb),-(rootfs)\0"\
+ 	"bootcmd=nand read ${loadaddr} 0x4000000 0x800000;"\
+ 		"nand read ${fdt_addr} 0x5000000 0x100000;"\
+ 		"bootz ${loadaddr} - ${fdt_addr}\0"
+@@ -106,7 +106,7 @@
+ 	"ip_dyn=yes\0" \
+ 	"mmcdev="__stringify(CONFIG_SYS_MMC_ENV_DEV)"\0" \
+ 	"mmcpart=" __stringify(CONFIG_SYS_MMC_IMG_LOAD_PART) "\0" \
+-	"mmcroot=" CONFIG_MMCROOT " rootwait rw\0" \
++	"mmcroot=  /dev/mmcblk0p1 rootwait rw\0" \
+ 	"mmcautodetect=yes\0" \
+ 	"mmcargs=setenv bootargs console=${console},${baudrate} " \
+ 	    CONFIG_BOOTARGS_CMA_SIZE \
+@@ -271,7 +271,7 @@
+ 
+ #define CONFIG_SYS_MMC_ENV_DEV		0   /* USDHC1 */
+ #define CONFIG_SYS_MMC_ENV_PART		0	/* user area */
+-#define CONFIG_MMCROOT			"/dev/mmcblk0p2"  /* USDHC1 */
++#define CONFIG_MMCROOT			"/dev/mmcblk0p1"  /* USDHC1 */
+ 
+ #define CONFIG_CMD_BMODE
+ 
+diff --git a/include/configs/mx6ullevk.h b/include/configs/mx6ullevk.h
+index ad8afad..a9c2a89 100644
+--- a/include/configs/mx6ullevk.h
++++ b/include/configs/mx6ullevk.h
+@@ -32,7 +32,7 @@
+ #define PHYS_SDRAM_SIZE		SZ_256M
+ #define CONFIG_BOOTARGS_CMA_SIZE   "cma=96M "
+ #else
+-#define PHYS_SDRAM_SIZE		SZ_512M
++#define PHYS_SDRAM_SIZE		SZ_256M
+ #define CONFIG_BOOTARGS_CMA_SIZE   ""
+ /* DCDC used on 14x14 EVK, no PMIC */
+ #undef CONFIG_LDO_BYPASS_CHECK
+@@ -90,7 +90,7 @@
+ #define CONFIG_SYS_MMC_IMG_LOAD_PART	1
+ 
+ #ifdef CONFIG_SYS_BOOT_NAND
+-#define CONFIG_MFG_NAND_PARTITION "mtdparts=gpmi-nand:64m(boot),16m(kernel),16m(dtb),1m(misc),-(rootfs) "
++#define CONFIG_MFG_NAND_PARTITION "mtdparts=gpmi-nand:2m(boot),4m(kernel),1m(dtb),-(data_app) "
+ #else
+ #define CONFIG_MFG_NAND_PARTITION ""
+ #endif
+@@ -98,33 +98,64 @@
+ #define CONFIG_MFG_ENV_SETTINGS \
+ 	"mfgtool_args=setenv bootargs console=${console},${baudrate} " \
+ 	    CONFIG_BOOTARGS_CMA_SIZE \
+-		"rdinit=/linuxrc " \
++		"rdinit=/linuxrc mem=256M " \
+ 		"g_mass_storage.stall=0 g_mass_storage.removable=1 " \
+ 		"g_mass_storage.file=/fat g_mass_storage.ro=1 " \
+ 		"g_mass_storage.idVendor=0x066F g_mass_storage.idProduct=0x37FF "\
+ 		"g_mass_storage.iSerialNumber=\"\" "\
+ 		CONFIG_MFG_NAND_PARTITION \
+ 		"clk_ignore_unused "\
++	    "mtdparts=gpmi-nand:2m(boot),4m(kernel),1m(dtb),-(data_app)"\
+ 		"\0" \
+ 	"initrd_addr=0x83800000\0" \
+ 	"initrd_high=0xffffffff\0" \
+ 	"bootcmd_mfg=run mfgtool_args;bootz ${loadaddr} ${initrd_addr} ${fdt_addr};\0" \
+ 
++
+ #if defined(CONFIG_SYS_BOOT_NAND)
++#if defined(CONFIG_SYS_KORG_DEV_CONSOLE)
+ #define CONFIG_EXTRA_ENV_SETTINGS \
+ 	CONFIG_MFG_ENV_SETTINGS \
+ 	"panel=TFT43AB\0" \
+ 	"fdt_addr=0x83000000\0" \
+ 	"fdt_high=0xffffffff\0"	  \
+ 	"console=ttymxc0\0" \
+-	"bootargs=console=ttymxc0,115200 ubi.mtd=4 "  \
+-		"root=ubi0:rootfs rootfstype=ubifs "		     \
++	"bootargs=ubi.mtd=3 "  \
++		"root=ubi0:rootfs rootfstype=ubifs rw rootwait "		     \
+ 		CONFIG_BOOTARGS_CMA_SIZE \
+-		"mtdparts=gpmi-nand:64m(boot),16m(kernel),16m(dtb),1m(misc),-(rootfs)\0"\
+-	"bootcmd=nand read ${loadaddr} 0x4000000 0x800000;"\
+-		"nand read ${fdt_addr} 0x5000000 0x100000;"\
++		"mtdparts=gpmi-nand:2m(boot),4m(kernel),1m(dtb),-(data_app)\0"\
++	"diagbootargs=\"ubi.mtd=3 "  \
++		"root=ubi0:rootfs rootfstype=ubifs rw rootwait "		     \
++		CONFIG_BOOTARGS_CMA_SIZE \
++		"mtdparts=gpmi-nand:2m(boot),4m(kernel),1m(dtb),-(data_app) mem=128M memtest=2\"\0"\
++	"bootcmd=nand read ${loadaddr} 0x200000 0x800000;"\
++		"nand read ${fdt_addr} 0x600000 0x100000;"\
++		"gpio input 4;" \
++		"GPIO4=$?;" \
++		"if test $GPIO4 = 1; then setenv bootargs $diagbootargs; fi;" \
+ 		"bootz ${loadaddr} - ${fdt_addr}\0"
+-
++#else
++#define CONFIG_EXTRA_ENV_SETTINGS \
++	CONFIG_MFG_ENV_SETTINGS \
++	"panel=TFT43AB\0" \
++	"fdt_addr=0x83000000\0" \
++	"fdt_high=0xffffffff\0"	  \
++	"console=ttymxc0\0" \
++	"bootargs=console=ttymxc0,115200 ubi.mtd=3 "  \
++		"root=ubi0:rootfs rootfstype=ubifs rw rootwait "		     \
++		CONFIG_BOOTARGS_CMA_SIZE \
++		"mtdparts=gpmi-nand:2m(boot),4m(kernel),1m(dtb),-(data_app)\0"\
++	"diagbootargs=\"console=ttymxc0,115200 ubi.mtd=3 "  \
++		"root=ubi0:rootfs rootfstype=ubifs rw rootwait "		     \
++		CONFIG_BOOTARGS_CMA_SIZE \
++		"mtdparts=gpmi-nand:2m(boot),4m(kernel),1m(dtb),-(data_app) mem=128M memtest=2\"\0"\
++	"bootcmd=nand read ${loadaddr} 0x200000 0x800000;"\
++		"nand read ${fdt_addr} 0x600000 0x100000;"\
++		"gpio input 4;" \
++		"GPIO4=$?;" \
++		"if test $GPIO4 = 1; then setenv bootargs $diagbootargs; fi;" \
++		"bootz ${loadaddr} - ${fdt_addr}\0"
++#endif
+ #else
+ #define CONFIG_EXTRA_ENV_SETTINGS \
+ 	CONFIG_MFG_ENV_SETTINGS \
+@@ -140,13 +171,13 @@
+ 	"panel=TFT43AB\0" \
+ 	"mmcdev="__stringify(CONFIG_SYS_MMC_ENV_DEV)"\0" \
+ 	"mmcpart=" __stringify(CONFIG_SYS_MMC_IMG_LOAD_PART) "\0" \
+-	"mmcroot=" CONFIG_MMCROOT " rootwait rw\0" \
++	"mmcroot= /dev/mmcblk0p1 rootwait\0" \
+ 	"mmcautodetect=yes\0" \
+ 	"mmcargs=setenv bootargs console=${console},${baudrate} " \
+ 		CONFIG_BOOTARGS_CMA_SIZE \
+ 		"root=${mmcroot}\0" \
+ 	"loadbootscript=" \
+-		"fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script};\0" \
++		"ext4load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script};\0" \
+ 	"bootscript=echo Running bootscript from mmc ...; " \
+ 		"source\0" \
+ 	"loadimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${image}\0" \
+@@ -255,7 +286,7 @@
+ 
+ #define CONFIG_SYS_MMC_ENV_DEV		1   /* USDHC2 */
+ #define CONFIG_SYS_MMC_ENV_PART		0	/* user area */
+-#define CONFIG_MMCROOT			"/dev/mmcblk1p2"  /* USDHC2 */
++#define CONFIG_MMCROOT			"/dev/mmcblk0p1"  /* USDHC2 */
+ 
+ #define CONFIG_CMD_BMODE
+ 
+@@ -348,7 +379,7 @@
+ #define CONFIG_IMX_THERMAL
+ 
+ #ifndef CONFIG_SPL_BUILD
+-#define CONFIG_VIDEO
++/* #define CONFIG_VIDEO */
+ #ifdef CONFIG_VIDEO
+ #define CONFIG_CFB_CONSOLE
+ #define CONFIG_VIDEO_MXS

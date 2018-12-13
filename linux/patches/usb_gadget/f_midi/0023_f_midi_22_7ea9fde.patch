@@ -1,0 +1,42 @@
+From 7ea9fde7605c3d224ba28cd17ffd8ac408453a96 Mon Sep 17 00:00:00 2001
+From: "Felipe F. Tonello" <eu@felipetonello.com>
+Date: Mon, 8 Aug 2016 21:30:08 +0100
+Subject: [PATCH] usb: gadget: f_midi: defaults buflen sizes to 512
+
+512 is the value used by wMaxPacketSize, as specified by the USB Spec. This
+makes sure this driver uses, by default, the most optimal value for IN and OUT
+endpoint requests.
+
+Signed-off-by: Felipe F. Tonello <eu@felipetonello.com>
+Signed-off-by: Felipe Balbi <felipe.balbi@linux.intel.com>
+---
+ drivers/usb/gadget/function/f_midi.c | 2 +-
+ drivers/usb/gadget/legacy/gmidi.c    | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/usb/gadget/function/f_midi.c b/drivers/usb/gadget/function/f_midi.c
+index 39018dea70356..a7b50ac947f86 100644
+--- a/drivers/usb/gadget/function/f_midi.c
++++ b/drivers/usb/gadget/function/f_midi.c
+@@ -1122,7 +1122,7 @@ static struct usb_function_instance *f_midi_alloc_inst(void)
+ 	opts->func_inst.free_func_inst = f_midi_free_inst;
+ 	opts->index = SNDRV_DEFAULT_IDX1;
+ 	opts->id = SNDRV_DEFAULT_STR1;
+-	opts->buflen = 256;
++	opts->buflen = 512;
+ 	opts->qlen = 32;
+ 	opts->in_ports = 1;
+ 	opts->out_ports = 1;
+diff --git a/drivers/usb/gadget/legacy/gmidi.c b/drivers/usb/gadget/legacy/gmidi.c
+index fc2ac150f5ffc..0bf39c3ccdb1c 100644
+--- a/drivers/usb/gadget/legacy/gmidi.c
++++ b/drivers/usb/gadget/legacy/gmidi.c
+@@ -47,7 +47,7 @@ static char *id = SNDRV_DEFAULT_STR1;
+ module_param(id, charp, S_IRUGO);
+ MODULE_PARM_DESC(id, "ID string for the USB MIDI Gadget adapter.");
+ 
+-static unsigned int buflen = 256;
++static unsigned int buflen = 512;
+ module_param(buflen, uint, S_IRUGO);
+ MODULE_PARM_DESC(buflen, "MIDI buffer length");
+ 

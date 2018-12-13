@@ -1,0 +1,250 @@
+--- a/drivers/usb/gadget/function/f_midi.c
++++ b/drivers/usb/gadget/function/f_midi.c
+@@ -41,7 +41,7 @@
+ MODULE_AUTHOR("Ben Williamson");
+ MODULE_LICENSE("GPL v2");
+ 
+-static const char f_midi_shortname[] = "f_midi";
++static const char f_midi_shortname[] = "USB MIDI";
+ static const char f_midi_longname[] = "MIDI Gadget";
+ 
+ /*
+@@ -77,6 +77,12 @@
+ 	uint8_t data[2];
+ };
+ 
++enum fmidi_host_status {
++	HOST_NOT_CONNECTED = 0,
++	HOST_IDLE = 1,
++	HOST_CONNECTED = 2,
++};
++
+ struct f_midi {
+ 	struct usb_function	func;
+ 	struct usb_gadget	*gadget;
+@@ -99,6 +105,11 @@
+ 	spinlock_t transmit_lock;
+ 	unsigned int in_last_port;
+ 
++	u32 last_host_activity_jiffies;
++	struct delayed_work host_timeout_queue;
++	u32 host_activity_timeout;
++	volatile enum fmidi_host_status host_status;
++
+ 	struct gmidi_in_port	in_ports_array[/* in_ports */];
+ };
+ 
+@@ -250,6 +261,15 @@
+ 		}
+ }
+ 
++f_midi_postpone_host_timeout(struct f_midi *midi)
++{
++	if(delayed_work_pending(&midi->host_timeout_queue))
++		cancel_delayed_work(&midi->host_timeout_queue);
++
++	schedule_delayed_work(&midi->host_timeout_queue,
++				msecs_to_jiffies(midi->host_activity_timeout));
++}
++
+ static void
+ f_midi_complete(struct usb_ep *ep, struct usb_request *req)
+ {
+@@ -259,6 +279,12 @@
+ 
+ 	switch (status) {
+ 	case 0:			 /* normal completion */
++
++
++		midi->host_status = HOST_CONNECTED;
++
++		f_midi_postpone_host_timeout(midi);
++
+ 		if (ep == midi->out_ep) {
+ 			/* We received stuff. req is queued again, below */
+ 			f_midi_handle_out_data(ep, req);
+@@ -354,6 +380,8 @@
+ 	if (intf != midi->ms_id)
+ 		return 0;
+ 
++	midi->host_status = HOST_IDLE;
++
+ 	err = f_midi_start_ep(midi, f, midi->in_ep);
+ 	if (err)
+ 		return err;
+@@ -393,6 +421,8 @@
+ 			return err;
+ 		}
+ 	}
++
++	f_midi_postpone_host_timeout(midi);
+ 
+ 	return 0;
+ }
+@@ -586,6 +616,40 @@
+ 	port->state = next_state;
+ }
+ 
++void gmidi_transmit_zero_length_packets(struct f_midi *midi)
++{
++
++	int num_of_packets, count, err, sent_packets;
++	struct usb_request * req;
++	struct usb_ep *ep = midi->in_ep;
++
++	num_of_packets = 6;;
++
++	for (sent_packets = 0; sent_packets < num_of_packets; sent_packets ++) {
++
++		count = kfifo_peek(&midi->in_req_fifo, &req);
++
++		if (count != 1 || req->length) {
++			// ERROR(midi, " gmidi_transmit_zero_length_packets - cannot peek %d\n", count);
++			return -1;
++		}
++
++		req->length = 0;
++
++		err = usb_ep_queue(ep, req, GFP_ATOMIC);
++
++		if (err < 0) {
++			ERROR(midi, "%s failed to queue req: %d\n",
++			      midi->in_ep->name, err);
++			req->length = 0; /* Re-use request next time. */
++		} else {
++			/* Upon success, put request at the back of the queue. */
++			kfifo_skip(&midi->in_req_fifo);
++			kfifo_put(&midi->in_req_fifo, req);
++		}
++	}
++}
++
+ static int f_midi_do_transmit(struct f_midi *midi, struct usb_ep *ep)
+ {
+ 	struct usb_request *req = NULL;
+@@ -609,8 +673,11 @@
+ 	 * until a) usb requests have been completed or b) snd_rawmidi_write()
+ 	 * times out.
+ 	 */
+-	if (req->length > 0)
++	if (req->length > 0) {
++		f_midi_drop_out_substreams(midi); // CLOSE THE DRIVER AND DO THAT on MIDI IN TRIGGER
++
+ 		return 0;
++	}
+ 
+ 	for (i = midi->in_last_port; i < midi->in_ports; ++i) {
+ 		struct gmidi_in_port *port = midi->in_ports_array + i;
+@@ -659,9 +726,13 @@
+ 	int ret;
+ 	unsigned long flags;
+ 
++	//if(!kfifo_avail(&midi->in_req_fifo))
++	//	goto drop_out;
++
+ 	/* We only care about USB requests if IN endpoint is enabled */
+-	if (!ep || !ep->enabled)
++	if (!ep || !ep->enabled || midi->host_status != HOST_CONNECTED) {
+ 		goto drop_out;
++	}
+ 
+ 	spin_lock_irqsave(&midi->transmit_lock, flags);
+ 
+@@ -839,6 +910,41 @@
+ fail:
+ 	f_midi_unregister_card(midi);
+ 	return err;
++}
++
++static void f_midi_host_timeout_work(struct work_struct *work)
++{
++	u32 elements_count;
++	int i;
++	struct usb_request *req = NULL;
++	struct f_midi *midi = container_of(work, struct f_midi, host_timeout_queue);
++	unsigned long flags;
++
++	midi->host_status = HOST_IDLE;
++
++	f_midi_drop_out_substreams(midi);
++
++	spin_lock_irqsave(&midi->transmit_lock, flags);
++
++	elements_count = kfifo_len(&midi->in_req_fifo);
++
++	// Clear all requests
++	for(i = 0; i < elements_count; i++) {
++
++		kfifo_peek(&midi->in_req_fifo, &req);
++
++		if(req->length) {
++			usb_ep_dequeue(midi->in_ep, req);
++			req->length = 0;
++		}
++
++		kfifo_skip(&midi->in_req_fifo);
++		kfifo_put(&midi->in_req_fifo, req);
++	}
++
++	spin_unlock_irqrestore(&midi->transmit_lock, flags);
++
++	gmidi_transmit_zero_length_packets(midi);
+ }
+ 
+ /* MIDI function driver setup/binding */
+@@ -882,6 +988,9 @@
+ 	ms_interface_desc.bInterfaceNumber = status;
+ 	ac_header_desc.baInterfaceNr[0] = status;
+ 	midi->ms_id = status;
++
++	midi->last_host_activity_jiffies = 0;
++	midi->host_status = HOST_NOT_CONNECTED;
+ 
+ 	status = -ENODEV;
+ 
+@@ -1010,6 +1119,11 @@
+ 	}
+ 
+ 	kfree(midi_function);
++
++	INIT_DELAYED_WORK(&(midi->host_timeout_queue), f_midi_host_timeout_work);
++
++	schedule_delayed_work(&midi->host_timeout_queue,
++		 msecs_to_jiffies(midi->host_activity_timeout));
+ 
+ 	return 0;
+ 
+@@ -1088,6 +1202,7 @@
+ F_MIDI_OPT(index, true, SNDRV_CARDS);
+ F_MIDI_OPT(buflen, false, 0);
+ F_MIDI_OPT(qlen, false, 0);
++F_MIDI_OPT(h_activity_timeout, false, 0);
+ F_MIDI_OPT(in_ports, true, MAX_PORTS);
+ F_MIDI_OPT(out_ports, true, MAX_PORTS);
+ 
+@@ -1181,6 +1296,7 @@
+ 	opts->id = SNDRV_DEFAULT_STR1;
+ 	opts->buflen = 512;
+ 	opts->qlen = 32;
++	opts->h_activity_timeout = 1000;
+ 	opts->in_ports = 1;
+ 	opts->out_ports = 1;
+ 
+@@ -1213,6 +1329,9 @@
+ 
+ 	DBG(cdev, "unbind\n");
+ 
++	cancel_delayed_work_sync(&midi->host_timeout_queue);
++	flush_scheduled_work();
++
+ 	/* just to be sure */
+ 	f_midi_disable(f);
+ 
+@@ -1262,6 +1381,7 @@
+ 	midi->index = opts->index;
+ 	midi->buflen = opts->buflen;
+ 	midi->qlen = opts->qlen;
++	midi->host_activity_timeout = opts->h_activity_timeout;
+ 	midi->in_last_port = 0;
+ 
+ 	status = kfifo_alloc(&midi->in_req_fifo, midi->qlen, GFP_KERNEL);

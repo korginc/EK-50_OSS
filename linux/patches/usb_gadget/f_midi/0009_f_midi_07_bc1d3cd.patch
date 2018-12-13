@@ -1,0 +1,51 @@
+From bc1d3cdc9c3cbbd9040da8c53237e177c38048b0 Mon Sep 17 00:00:00 2001
+From: "Felipe F. Tonello" <eu@felipetonello.com>
+Date: Tue, 10 Nov 2015 17:52:04 +0000
+Subject: [PATCH] usb: gadget: f_midi: remove duplicated code
+
+This code is duplicated from f_midi_start_ep(midi, f, midi->out_ep).
+
+Reviewed-by: Robert Baldyga <r.baldyga@samsung.com>
+Signed-off-by: Felipe F. Tonello <eu@felipetonello.com>
+Signed-off-by: Felipe Balbi <balbi@ti.com>
+---
+ drivers/usb/gadget/function/f_midi.c | 19 -------------------
+ 1 file changed, 19 deletions(-)
+
+diff --git a/drivers/usb/gadget/function/f_midi.c b/drivers/usb/gadget/function/f_midi.c
+index 898a570319f17..695cf75428e34 100644
+--- a/drivers/usb/gadget/function/f_midi.c
++++ b/drivers/usb/gadget/function/f_midi.c
+@@ -324,7 +324,6 @@ static int f_midi_start_ep(struct f_midi *midi,
+ static int f_midi_set_alt(struct usb_function *f, unsigned intf, unsigned alt)
+ {
+ 	struct f_midi *midi = func_to_midi(f);
+-	struct usb_composite_dev *cdev = f->config->cdev;
+ 	unsigned i;
+ 	int err;
+ 
+@@ -340,24 +339,6 @@ static int f_midi_set_alt(struct usb_function *f, unsigned intf, unsigned alt)
+ 	if (err)
+ 		return err;
+ 
+-	usb_ep_disable(midi->out_ep);
+-
+-	err = config_ep_by_speed(midi->gadget, f, midi->out_ep);
+-	if (err) {
+-		ERROR(cdev, "can't configure %s: %d\n",
+-		      midi->out_ep->name, err);
+-		return err;
+-	}
+-
+-	err = usb_ep_enable(midi->out_ep);
+-	if (err) {
+-		ERROR(cdev, "can't start %s: %d\n",
+-		      midi->out_ep->name, err);
+-		return err;
+-	}
+-
+-	midi->out_ep->driver_data = midi;
+-
+ 	/* allocate a bunch of read buffers and queue them all at once. */
+ 	for (i = 0; i < midi->qlen && err == 0; i++) {
+ 		struct usb_request *req =

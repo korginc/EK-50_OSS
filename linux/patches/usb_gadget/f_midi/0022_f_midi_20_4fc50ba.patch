@@ -1,0 +1,33 @@
+From 4fc50ba5965ac2b360499d4a23eb10d04414dd36 Mon Sep 17 00:00:00 2001
+From: Dan Carpenter <dan.carpenter@oracle.com>
+Date: Sat, 2 Apr 2016 07:51:08 +0300
+Subject: [PATCH] usb: gadget: f_midi: unlock on error
+
+We added some new locking here, but missed an error path where we need
+to unlock.
+
+Fixes: 9acdf4df2fc4 ('usb: gadget: f_midi: added spinlock on transmit function')
+Acked-by: Michal Nazarewicz <mina86@mina86.com>
+Acked-by: Felipe F. Tonello <eu@felipetonello.com>
+Signed-off-by: Dan Carpenter <dan.carpenter@oracle.com>
+Signed-off-by: Felipe Balbi <felipe.balbi@linux.intel.com>
+---
+ drivers/usb/gadget/function/f_midi.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/usb/gadget/function/f_midi.c b/drivers/usb/gadget/function/f_midi.c
+index 9ad51dcab9824..58fc199a18ecd 100644
+--- a/drivers/usb/gadget/function/f_midi.c
++++ b/drivers/usb/gadget/function/f_midi.c
+@@ -611,8 +611,10 @@ static void f_midi_transmit(struct f_midi *midi)
+ 
+ 	do {
+ 		ret = f_midi_do_transmit(midi, ep);
+-		if (ret < 0)
++		if (ret < 0) {
++			spin_unlock_irqrestore(&midi->transmit_lock, flags);
+ 			goto drop_out;
++		}
+ 	} while (ret);
+ 
+ 	spin_unlock_irqrestore(&midi->transmit_lock, flags);

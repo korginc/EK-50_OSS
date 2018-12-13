@@ -1,0 +1,78 @@
+From 9acdf4df2fc4680b08fa242b09717892cd687d4a Mon Sep 17 00:00:00 2001
+From: "Felipe F. Tonello" <eu@felipetonello.com>
+Date: Tue, 8 Mar 2016 20:21:47 +0000
+Subject: [PATCH] usb: gadget: f_midi: added spinlock on transmit function
+
+Since f_midi_transmit is called by both ALSA and USB sub-systems, it can
+potentially cause a race condition between both calls because f_midi_transmit
+is not reentrant nor thread-safe. This is due to an implementation detail that
+the transmit function looks for the next available usb request from the fifo
+and only enqueues it if there is data to send, otherwise just re-uses it. So,
+if both ALSA and USB frameworks calls this function at the same time,
+kfifo_seek() will return the same usb_request, which will cause a race
+condition.
+
+To solve this problem a syncronization mechanism is necessary. In this case it
+is used a spinlock since f_midi_transmit is also called by usb_request->complete
+callback in interrupt context.
+
+Cc: <stable@vger.kernel.org> # v4.5+
+Fixes: e1e3d7ec5da3 ("usb: gadget: f_midi: pre-allocate IN requests")
+Signed-off-by: Felipe F. Tonello <eu@felipetonello.com>
+Signed-off-by: Felipe Balbi <balbi@kernel.org>
+---
+ drivers/usb/gadget/function/f_midi.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/drivers/usb/gadget/function/f_midi.c b/drivers/usb/gadget/function/f_midi.c
+index 84c0ee5ebd1ea..56e2dde99b034 100644
+--- a/drivers/usb/gadget/function/f_midi.c
++++ b/drivers/usb/gadget/function/f_midi.c
+@@ -24,6 +24,7 @@
+ #include <linux/slab.h>
+ #include <linux/device.h>
+ #include <linux/kfifo.h>
++#include <linux/spinlock.h>
+ 
+ #include <sound/core.h>
+ #include <sound/initval.h>
+@@ -89,6 +90,7 @@ struct f_midi {
+ 	unsigned int buflen, qlen;
+ 	/* This fifo is used as a buffer ring for pre-allocated IN usb_requests */
+ 	DECLARE_KFIFO_PTR(in_req_fifo, struct usb_request *);
++	spinlock_t transmit_lock;
+ 	unsigned int in_last_port;
+ 
+ 	struct gmidi_in_port	in_ports_array[/* in_ports */];
+@@ -597,17 +599,22 @@ static void f_midi_transmit(struct f_midi *midi)
+ {
+ 	struct usb_ep *ep = midi->in_ep;
+ 	int ret;
++	unsigned long flags;
+ 
+ 	/* We only care about USB requests if IN endpoint is enabled */
+ 	if (!ep || !ep->enabled)
+ 		goto drop_out;
+ 
++	spin_lock_irqsave(&midi->transmit_lock, flags);
++
+ 	do {
+ 		ret = f_midi_do_transmit(midi, ep);
+ 		if (ret < 0)
+ 			goto drop_out;
+ 	} while (ret);
+ 
++	spin_unlock_irqrestore(&midi->transmit_lock, flags);
++
+ 	return;
+ 
+ drop_out:
+@@ -1201,6 +1208,8 @@ static struct usb_function *f_midi_alloc(struct usb_function_instance *fi)
+ 	if (status)
+ 		goto setup_fail;
+ 
++	spin_lock_init(&midi->transmit_lock);
++
+ 	++opts->refcnt;
+ 	mutex_unlock(&opts->lock);
+ 

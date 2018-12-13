@@ -1,0 +1,36 @@
+From 84704bb3d183e55d042bf57043552f2649443a64 Mon Sep 17 00:00:00 2001
+From: Macpaul Lin <macpaul@gmail.com>
+Date: Thu, 9 Jul 2015 15:18:41 +0800
+Subject: [PATCH] usb: add usb_otg_caps to usb_gadget structure.
+
+Add usb_otg_caps pointer to usb_gadget structure to indicate its
+otg capabilities.
+
+Signed-off-by: Macpaul Lin <macpaul@gmail.com>
+Signed-off-by: Li Jun <jun.li@freescale.com>
+Reviewed-by: Roger Quadros <rogerq@ti.com>
+Signed-off-by: Felipe Balbi <balbi@ti.com>
+---
+ include/linux/usb/gadget.h | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/include/linux/usb/gadget.h b/include/linux/usb/gadget.h
+index 15604bb3e524f..fffceafb6b8c0 100644
+--- a/include/linux/usb/gadget.h
++++ b/include/linux/usb/gadget.h
+@@ -511,6 +511,7 @@ struct usb_gadget_ops {
+  * @dev: Driver model state for this abstract device.
+  * @out_epnum: last used out ep number
+  * @in_epnum: last used in ep number
++ * @otg_caps: OTG capabilities of this gadget.
+  * @sg_supported: true if we can handle scatter-gather
+  * @is_otg: True if the USB device port uses a Mini-AB jack, so that the
+  *	gadget driver must provide a USB OTG descriptor.
+@@ -562,6 +563,7 @@ struct usb_gadget {
+ 	struct device			dev;
+ 	unsigned			out_epnum;
+ 	unsigned			in_epnum;
++	struct usb_otg_caps		*otg_caps;
+ 
+ 	unsigned			sg_supported:1;
+ 	unsigned			is_otg:1;

@@ -1,0 +1,102 @@
+--- a/drivers/usb/gadget/function/f_midi.c
++++ b/drivers/usb/gadget/function/f_midi.c
+@@ -196,7 +196,7 @@
+ };
+ 
+ static inline struct usb_request *midi_alloc_ep_req(struct usb_ep *ep,
+-							unsigned length)
++						    unsigned length)
+ {
+ 	return alloc_ep_req(ep, length, length);
+ }
+@@ -215,7 +215,7 @@
+  * Receives a chunk of MIDI data.
+  */
+ static void f_midi_read_data(struct usb_ep *ep, int cable,
+-				 uint8_t *data, int length)
++			     uint8_t *data, int length)
+ {
+ 	struct f_midi *midi = ep->driver_data;
+ 	struct snd_rawmidi_substream *substream = midi->out_substream[cable];
+@@ -318,7 +318,7 @@
+ 	}
+ 
+ 	ep->driver_data = midi;
+-	
++
+ 	return 0;
+ }
+ 
+@@ -343,14 +343,14 @@
+ 	err = config_ep_by_speed(midi->gadget, f, midi->out_ep);
+ 	if (err) {
+ 		ERROR(cdev, "can't configure %s: %d\n",
+-			  midi->out_ep->name, err);
++		      midi->out_ep->name, err);
+ 		return err;
+ 	}
+ 
+ 	err = usb_ep_enable(midi->out_ep);
+ 	if (err) {
+ 		ERROR(cdev, "can't start %s: %d\n",
+-			  midi->out_ep->name, err);
++		      midi->out_ep->name, err);
+ 		return err;
+ 	}
+ 
+@@ -367,7 +367,7 @@
+ 		err = usb_ep_queue(midi->out_ep, req, GFP_ATOMIC);
+ 		if (err) {
+ 			ERROR(midi, "%s queue req: %d\n",
+-					midi->out_ep->name, err);
++				    midi->out_ep->name, err);
+ 		}
+ 	}
+ 
+@@ -672,7 +672,7 @@
+ 	/* Set up rawmidi */
+ 	snd_component_add(card, "MIDI");
+ 	err = snd_rawmidi_new(card, card->longname, 0,
+-				  midi->out_ports, midi->in_ports, &rmidi);
++			      midi->out_ports, midi->in_ports, &rmidi);
+ 	if (err < 0) {
+ 		ERROR(midi, "snd_rawmidi_new() failed: error %d\n", err);
+ 		goto fail;
+@@ -680,8 +680,8 @@
+ 	midi->rmidi = rmidi;
+ 	strcpy(rmidi->name, card->shortname);
+ 	rmidi->info_flags = SNDRV_RAWMIDI_INFO_OUTPUT |
+-				SNDRV_RAWMIDI_INFO_INPUT |
+-				SNDRV_RAWMIDI_INFO_DUPLEX;
++			    SNDRV_RAWMIDI_INFO_INPUT |
++			    SNDRV_RAWMIDI_INFO_DUPLEX;
+ 	rmidi->private_data = midi;
+ 
+ 	/*
+@@ -1062,7 +1062,7 @@
+ 	opts->out_ports = 1;
+ 
+ 	config_group_init_type_name(&opts->func_inst.group, "",
+-					&midi_func_type);
++				    &midi_func_type);
+ 
+ 	return &opts->func_inst;
+ }
+@@ -1145,7 +1145,7 @@
+ 	if (opts->id && !midi->id) {
+ 		status = -ENOMEM;
+ 		mutex_unlock(&opts->lock);
+-		goto kstrdup_fail;
++		goto setup_fail;
+ 	}
+ 	midi->in_ports = opts->in_ports;
+ 	midi->out_ports = opts->out_ports;
+@@ -1164,8 +1164,6 @@
+ 
+ 	return &midi->func;
+ 
+-kstrdup_fail:
+-	f_midi_unregister_card(midi);
+ setup_fail:
+ 	for (--i; i >= 0; i--)
+ 		kfree(midi->in_port[i]);

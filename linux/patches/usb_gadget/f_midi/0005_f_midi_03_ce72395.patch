@@ -1,0 +1,71 @@
+From ce723951a5093a47b312d828c2b975c4cf3d5a5b Mon Sep 17 00:00:00 2001
+From: Robert Baldyga <r.baldyga@samsung.com>
+Date: Wed, 16 Sep 2015 12:10:49 +0200
+Subject: [PATCH] usb: gadget: f_midi: eliminate abuse of ep->driver data
+
+Since ep->driver_data is not used for endpoint claiming, neither for
+enabled/disabled state storing, we can reduce number of places where
+we read or modify it's value, as now it has no particular meaning for
+function or framework logic.
+
+In case of f_midi we only need to store in ep->driver_data pointer to
+struct f_midi, as it's used in f_midi_complete() callback and related
+functions. All other uses of ep->driver_data are now meaningless and
+can be safely removed.
+
+Signed-off-by: Robert Baldyga <r.baldyga@samsung.com>
+Signed-off-by: Felipe Balbi <balbi@ti.com>
+---
+ drivers/usb/gadget/function/f_midi.c | 14 ++------------
+ 1 file changed, 2 insertions(+), 12 deletions(-)
+
+diff --git a/drivers/usb/gadget/function/f_midi.c b/drivers/usb/gadget/function/f_midi.c
+index 9fc86d90c7bd1..ce3c8a629266c 100644
+--- a/drivers/usb/gadget/function/f_midi.c
++++ b/drivers/usb/gadget/function/f_midi.c
+@@ -302,8 +302,7 @@ static int f_midi_start_ep(struct f_midi *midi,
+ 	int err;
+ 	struct usb_composite_dev *cdev = f->config->cdev;
+ 
+-	if (ep->driver_data)
+-		usb_ep_disable(ep);
++	usb_ep_disable(ep);
+ 
+ 	err = config_ep_by_speed(midi->gadget, f, ep);
+ 	if (err) {
+@@ -341,8 +340,7 @@ static int f_midi_set_alt(struct usb_function *f, unsigned intf, unsigned alt)
+ 	if (err)
+ 		return err;
+ 
+-	if (midi->out_ep->driver_data)
+-		usb_ep_disable(midi->out_ep);
++	usb_ep_disable(midi->out_ep);
+ 
+ 	err = config_ep_by_speed(midi->gadget, f, midi->out_ep);
+ 	if (err) {
+@@ -763,12 +761,10 @@ static int f_midi_bind(struct usb_configuration *c, struct usb_function *f)
+ 	midi->in_ep = usb_ep_autoconfig(cdev->gadget, &bulk_in_desc);
+ 	if (!midi->in_ep)
+ 		goto fail;
+-	midi->in_ep->driver_data = cdev;	/* claim */
+ 
+ 	midi->out_ep = usb_ep_autoconfig(cdev->gadget, &bulk_out_desc);
+ 	if (!midi->out_ep)
+ 		goto fail;
+-	midi->out_ep->driver_data = cdev;	/* claim */
+ 
+ 	/* allocate temporary function list */
+ 	midi_function = kcalloc((MAX_PORTS * 4) + 9, sizeof(*midi_function),
+@@ -895,12 +891,6 @@ static int f_midi_bind(struct usb_configuration *c, struct usb_function *f)
+ fail:
+ 	f_midi_unregister_card(midi);
+ fail_register:
+-	/* we might as well release our claims on endpoints */
+-	if (midi->out_ep)
+-		midi->out_ep->driver_data = NULL;
+-	if (midi->in_ep)
+-		midi->in_ep->driver_data = NULL;
+-
+ 	ERROR(cdev, "%s: can't bind, err %d\n", f->name, status);
+ 
+ 	return status;

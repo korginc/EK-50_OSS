@@ -1,0 +1,23 @@
+From f4dcdd95d04a357dc88aab87f283885c031a3d1b Mon Sep 17 00:00:00 2001
+From: Enrico Alessio Romeo <romeo@korg.it>
+Date: Mon, 13 Nov 2017 18:53:53 +0100
+Subject: [PATCH] midi usb gadget: Handle Host activity interruption
+
+Note: mitsu@korg.co.jp
+separated patch for f_midi.c and u_midi.h . this patch is for u_midi only
+---
+ drivers/usb/gadget/function/u_midi.h |   1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/usb/gadget/function/u_midi.h b/drivers/usb/gadget/function/u_midi.h
+index 22510189758e..933d2da1ba32 100644
+--- a/drivers/usb/gadget/function/u_midi.h
++++ b/drivers/usb/gadget/function/u_midi.h
+@@ -27,6 +27,7 @@ struct f_midi_opts {
+ 	unsigned int			out_ports;
+ 	unsigned int			buflen;
+ 	unsigned int			qlen;
++	u32				h_activity_timeout;
+ 
+ 	/*
+ 	 * Protect the data form concurrent access by read/write

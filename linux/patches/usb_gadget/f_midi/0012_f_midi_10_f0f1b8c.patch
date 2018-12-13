@@ -1,0 +1,32 @@
+From f0f1b8cac4d8d973e95f25d9ea132775fb43c5f4 Mon Sep 17 00:00:00 2001
+From: "Felipe F. Tonello" <eu@felipetonello.com>
+Date: Tue, 1 Dec 2015 18:31:01 +0000
+Subject: [PATCH] usb: gadget: f_midi: fail if set_alt fails to allocate
+ requests
+
+This ensures that the midi function will only work if the proper number of
+IN and OUT requrests are allocated. Otherwise the function will work with less
+requests then what the user wants.
+
+Signed-off-by: Felipe F. Tonello <eu@felipetonello.com>
+Signed-off-by: Felipe Balbi <balbi@ti.com>
+---
+ drivers/usb/gadget/function/f_midi.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/usb/gadget/function/f_midi.c b/drivers/usb/gadget/function/f_midi.c
+index e804231bd8e59..79dc611a2fc46 100644
+--- a/drivers/usb/gadget/function/f_midi.c
++++ b/drivers/usb/gadget/function/f_midi.c
+@@ -344,9 +344,10 @@ static int f_midi_set_alt(struct usb_function *f, unsigned intf, unsigned alt)
+ 		req->complete = f_midi_complete;
+ 		err = usb_ep_queue(midi->out_ep, req, GFP_ATOMIC);
+ 		if (err) {
+-			ERROR(midi, "%s queue req: %d\n",
++			ERROR(midi, "%s: couldn't enqueue request: %d\n",
+ 				    midi->out_ep->name, err);
+ 			free_ep_req(midi->out_ep, req);
++			return err;
+ 		}
+ 	}
+ 

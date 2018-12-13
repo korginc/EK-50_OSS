@@ -1,0 +1,13 @@
+diff --git a/drivers/tty/serial/imx.c b/drivers/tty/serial/imx.c
+index c9bd603d395b..c9bee3206f92 100644
+--- a/drivers/tty/serial/imx.c
++++ b/drivers/tty/serial/imx.c
+@@ -1071,7 +1071,7 @@ static void imx_enable_dma(struct imx_port *sport)
+ 	temp = readl(sport->port.membase + UCR1);
+ 	temp |= UCR1_RDMAEN | UCR1_TDMAEN | UCR1_ATDMAEN |
+ 		/* wait for 32 idle frames for IDDMA interrupt */
+-		UCR1_ICD_REG(3);
++		UCR1_ICD_REG(0);
+ 	writel(temp, sport->port.membase + UCR1);
+ 
+ 	/* set UCR4 */

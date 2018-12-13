@@ -1,0 +1,20 @@
+diff --git a/arch/arm/boot/dts/imx6ull.dtsi b/arch/arm/boot/dts/imx6ull.dtsi
+index d8b6706800ea..634b09a984a1 100644
+--- a/arch/arm/boot/dts/imx6ull.dtsi
++++ b/arch/arm/boot/dts/imx6ull.dtsi
+@@ -57,12 +57,14 @@
+ 			clock-latency = <61036>; /* two CLK32 periods */
+ 			operating-points = <
+ 				/* kHz	uV */
++                900000  1275000
+ 				528000	1175000
+ 				396000	1025000
+ 				198000	950000
+ 			>;
+ 			fsl,soc-operating-points = <
+ 				/* KHz	uV */
++                900000  1275000
+ 				528000	1175000
+ 				396000	1175000
+ 				198000	1175000
+

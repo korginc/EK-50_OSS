@@ -1,0 +1,69 @@
+From f8ca46aeb7b422b8c22e286e25269e4fefc560bd Mon Sep 17 00:00:00 2001
+From: "Felipe F. Tonello" <eu@felipetonello.com>
+Date: Mon, 8 Aug 2016 21:30:10 +0100
+Subject: [PATCH] usb: gadget: f_midi: drop substreams when disabling endpoint
+
+This change makes sure that the ALSA buffers are cleaned if an endpoint
+becomes disabled.
+
+Before this change, if the internal ALSA buffer did overflow, the MIDI
+function would stop sending MIDI to the host.
+
+Signed-off-by: Felipe F. Tonello <eu@felipetonello.com>
+Signed-off-by: Felipe Balbi <felipe.balbi@linux.intel.com>
+---
+ drivers/usb/gadget/function/f_midi.c | 27 +++++++++++++++------------
+ 1 file changed, 15 insertions(+), 12 deletions(-)
+
+diff --git a/drivers/usb/gadget/function/f_midi.c b/drivers/usb/gadget/function/f_midi.c
+index 09d769e18b505..3a47596afcabd 100644
+--- a/drivers/usb/gadget/function/f_midi.c
++++ b/drivers/usb/gadget/function/f_midi.c
+@@ -305,6 +305,19 @@ f_midi_complete(struct usb_ep *ep, struct usb_request *req)
+ 	}
+ }
+ 
++static void f_midi_drop_out_substreams(struct f_midi *midi)
++{
++	unsigned int i;
++
++	for (i = 0; i < midi->in_ports; i++) {
++		struct gmidi_in_port *port = midi->in_ports_array + i;
++		struct snd_rawmidi_substream *substream = port->substream;
++
++		if (port->active && substream)
++			snd_rawmidi_drop_output(substream);
++	}
++}
++
+ static int f_midi_start_ep(struct f_midi *midi,
+ 			   struct usb_function *f,
+ 			   struct usb_ep *ep)
+@@ -402,6 +415,8 @@ static void f_midi_disable(struct usb_function *f)
+ 	/* release IN requests */
+ 	while (kfifo_get(&midi->in_req_fifo, &req))
+ 		free_ep_req(midi->in_ep, req);
++
++	f_midi_drop_out_substreams(midi);
+ }
+ 
+ static int f_midi_snd_free(struct snd_device *device)
+@@ -571,18 +586,6 @@ static void f_midi_transmit_byte(struct usb_request *req,
+ 	port->state = next_state;
+ }
+ 
+-static void f_midi_drop_out_substreams(struct f_midi *midi)
+-{
+-	unsigned int i;
+-
+-	for (i = 0; i < midi->in_ports; i++) {
+-		struct gmidi_in_port *port = midi->in_ports_array + i;
+-		struct snd_rawmidi_substream *substream = port->substream;
+-		if (port->active && substream)
+-			snd_rawmidi_drop_output(substream);
+-	}
+-}
+-
+ static int f_midi_do_transmit(struct f_midi *midi, struct usb_ep *ep)
+ {
+ 	struct usb_request *req = NULL;

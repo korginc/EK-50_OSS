@@ -1,0 +1,69 @@
+From 413489c8337bf86b7787248484b1e845111809be Mon Sep 17 00:00:00 2001
+From: Dan Carpenter <dan.carpenter@oracle.com>
+Date: Tue, 5 Jan 2016 13:28:09 +0300
+Subject: [PATCH] usb: gadget: f_midi: missing unlock on error path
+
+We added a new error path to this function and we forgot to drop the
+lock.
+
+Fixes: e1e3d7ec5da3 ('usb: gadget: f_midi: pre-allocate IN requests')
+Signed-off-by: Dan Carpenter <dan.carpenter@oracle.com>
+[mina86@mina86.com: rebased on top of refactoring commit]
+Signed-off-by: Michal Nazarewicz <mina86@mina86.com>
+
+Signed-off-by: Felipe Balbi <balbi@kernel.org>
+---
+ drivers/usb/gadget/function/f_midi.c | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/usb/gadget/function/f_midi.c b/drivers/usb/gadget/function/f_midi.c
+index 8a3c8c45bf0d3..0e411bffa4ab3 100644
+--- a/drivers/usb/gadget/function/f_midi.c
++++ b/drivers/usb/gadget/function/f_midi.c
+@@ -1157,7 +1157,7 @@ static void f_midi_unbind(struct usb_configuration *c, struct usb_function *f)
+ 
+ static struct usb_function *f_midi_alloc(struct usb_function_instance *fi)
+ {
+-	struct f_midi *midi;
++	struct f_midi *midi = NULL;
+ 	struct f_midi_opts *opts;
+ 	int status, i;
+ 
+@@ -1166,8 +1166,8 @@ static struct usb_function *f_midi_alloc(struct usb_function_instance *fi)
+ 	mutex_lock(&opts->lock);
+ 	/* sanity check */
+ 	if (opts->in_ports > MAX_PORTS || opts->out_ports > MAX_PORTS) {
+-		mutex_unlock(&opts->lock);
+-		return ERR_PTR(-EINVAL);
++		status = -EINVAL;
++		goto setup_fail;
+ 	}
+ 
+ 	/* allocate and initialize one new instance */
+@@ -1175,8 +1175,8 @@ static struct usb_function *f_midi_alloc(struct usb_function_instance *fi)
+ 		sizeof(*midi) + opts->in_ports * sizeof(*midi->in_ports_array),
+ 		GFP_KERNEL);
+ 	if (!midi) {
+-		mutex_unlock(&opts->lock);
+-		return ERR_PTR(-ENOMEM);
++		status = -ENOMEM;
++		goto setup_fail;
+ 	}
+ 
+ 	for (i = 0; i < opts->in_ports; i++)
+@@ -1186,7 +1186,6 @@ static struct usb_function *f_midi_alloc(struct usb_function_instance *fi)
+ 	midi->id = kstrdup(opts->id, GFP_KERNEL);
+ 	if (opts->id && !midi->id) {
+ 		status = -ENOMEM;
+-		mutex_unlock(&opts->lock);
+ 		goto setup_fail;
+ 	}
+ 	midi->in_ports = opts->in_ports;
+@@ -1213,6 +1212,7 @@ static struct usb_function *f_midi_alloc(struct usb_function_instance *fi)
+ 	return &midi->func;
+ 
+ setup_fail:
++	mutex_unlock(&opts->lock);
+ 	kfree(midi);
+ 	return ERR_PTR(status);
+ }

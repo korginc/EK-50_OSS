@@ -1,0 +1,28 @@
+From ad0d1a058eac46503edbc510d1ce44c5df8e0c91 Mon Sep 17 00:00:00 2001
+From: "Felipe F. Tonello" <eu@felipetonello.com>
+Date: Tue, 10 Nov 2015 17:52:06 +0000
+Subject: [PATCH] usb: gadget: f_midi: fix leak on failed to enqueue out
+ requests
+
+This patch fixes a memory leak that occurs when an endpoint fails to enqueue
+the request. If that happens the complete function will never be called, thus
+never freeing the request.
+
+Signed-off-by: Felipe F. Tonello <eu@felipetonello.com>
+Signed-off-by: Felipe Balbi <balbi@ti.com>
+---
+ drivers/usb/gadget/function/f_midi.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/usb/gadget/function/f_midi.c b/drivers/usb/gadget/function/f_midi.c
+index 7877aa8e2aec5..898a570319f17 100644
+--- a/drivers/usb/gadget/function/f_midi.c
++++ b/drivers/usb/gadget/function/f_midi.c
+@@ -370,6 +370,7 @@ static int f_midi_set_alt(struct usb_function *f, unsigned intf, unsigned alt)
+ 		if (err) {
+ 			ERROR(midi, "%s queue req: %d\n",
+ 				    midi->out_ep->name, err);
++			free_ep_req(midi->out_ep, req);
+ 		}
+ 	}
+ 

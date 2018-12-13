@@ -1,0 +1,33 @@
+From 4ef7a4a1f097b2c17f4f2873a1595aa0aca9f6b4 Mon Sep 17 00:00:00 2001
+From: Robert Baldyga <r.baldyga@samsung.com>
+Date: Mon, 13 Jul 2015 11:03:51 +0200
+Subject: [PATCH] usb: gadget: midi: avoid redundant f_midi_set_alt() call
+
+Function midi registers two interfaces with single set_alt() function
+which means that f_midi_set_alt() is called twice when configuration
+is set. That means that endpoint initialization and ep request allocation
+is done two times. To avoid this problem we do such things only once,
+for interface number 1 (MIDI Streaming interface).
+
+Signed-off-by: Robert Baldyga <r.baldyga@samsung.com>
+Acked-by: Michal Nazarewicz <mina86@mina86.com>
+Signed-off-by: Felipe Balbi <balbi@ti.com>
+---
+ drivers/usb/gadget/function/f_midi.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/drivers/usb/gadget/function/f_midi.c b/drivers/usb/gadget/function/f_midi.c
+index ad50a67c14656..a287a48292731 100644
+--- a/drivers/usb/gadget/function/f_midi.c
++++ b/drivers/usb/gadget/function/f_midi.c
+@@ -329,6 +329,10 @@ static int f_midi_set_alt(struct usb_function *f, unsigned intf, unsigned alt)
+ 	unsigned i;
+ 	int err;
+ 
++	/* For Control Device interface we do nothing */
++	if (intf == 0)
++		return 0;
++
+ 	err = f_midi_start_ep(midi, f, midi->in_ep);
+ 	if (err)
+ 		return err;

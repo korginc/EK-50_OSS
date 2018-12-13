@@ -1,0 +1,125 @@
+From b8464bcf0a20970471e8f897fe4706fcc2702263 Mon Sep 17 00:00:00 2001
+From: Vaishali Thakkar <vthakkar1994@gmail.com>
+Date: Sat, 6 Jun 2015 07:02:53 +0530
+Subject: [PATCH] usb: gadget: Convert use of __constant_cpu_to_le16 to
+ cpu_to_le16
+
+In big endian cases, macro cpu_to_le16 unfolds to __swab16 which
+provides special case for constants. In little endian cases,
+__constant_cpu_to_le16 and cpu_to_le16 expand directly to the
+same expression. So, replace __constant_cpu_to_le16 with
+cpu_to_le16 with the goal of getting rid of the definition of
+__constant_cpu_to_le16 completely.
+
+The semantic patch that performs this transformation is as follows:
+
+@@expression x;@@
+
+- __constant_cpu_to_le16(x)
++ cpu_to_le16(x)
+
+Signed-off-by: Vaishali Thakkar <vthakkar1994@gmail.com>
+Signed-off-by: Felipe Balbi <balbi@ti.com>
+---
+ drivers/usb/gadget/legacy/audio.c |  6 +++---
+ drivers/usb/gadget/legacy/dbgp.c  | 10 +++++-----
+ drivers/usb/gadget/legacy/gmidi.c |  6 +++---
+ drivers/usb/gadget/legacy/nokia.c |  6 +++---
+ 4 files changed, 14 insertions(+), 14 deletions(-)
+
+diff --git a/drivers/usb/gadget/legacy/audio.c b/drivers/usb/gadget/legacy/audio.c
+index f289caf18a453..b8095bfe57b63 100644
+--- a/drivers/usb/gadget/legacy/audio.c
++++ b/drivers/usb/gadget/legacy/audio.c
+@@ -124,7 +124,7 @@ static struct usb_device_descriptor device_desc = {
+ 	.bLength =		sizeof device_desc,
+ 	.bDescriptorType =	USB_DT_DEVICE,
+ 
+-	.bcdUSB =		__constant_cpu_to_le16(0x200),
++	.bcdUSB =		cpu_to_le16(0x200),
+ 
+ #ifdef CONFIG_GADGET_UAC1
+ 	.bDeviceClass =		USB_CLASS_PER_INTERFACE,
+@@ -141,8 +141,8 @@ static struct usb_device_descriptor device_desc = {
+ 	 * we support.  (As does bNumConfigurations.)  These values can
+ 	 * also be overridden by module parameters.
+ 	 */
+-	.idVendor =		__constant_cpu_to_le16(AUDIO_VENDOR_NUM),
+-	.idProduct =		__constant_cpu_to_le16(AUDIO_PRODUCT_NUM),
++	.idVendor =		cpu_to_le16(AUDIO_VENDOR_NUM),
++	.idProduct =		cpu_to_le16(AUDIO_PRODUCT_NUM),
+ 	/* .bcdDevice = f(hardware) */
+ 	/* .iManufacturer = DYNAMIC */
+ 	/* .iProduct = DYNAMIC */
+diff --git a/drivers/usb/gadget/legacy/dbgp.c b/drivers/usb/gadget/legacy/dbgp.c
+index 204b10b1a7e7d..5231a32aef55a 100644
+--- a/drivers/usb/gadget/legacy/dbgp.c
++++ b/drivers/usb/gadget/legacy/dbgp.c
+@@ -35,10 +35,10 @@ static struct dbgp {
+ static struct usb_device_descriptor device_desc = {
+ 	.bLength = sizeof device_desc,
+ 	.bDescriptorType = USB_DT_DEVICE,
+-	.bcdUSB = __constant_cpu_to_le16(0x0200),
++	.bcdUSB = cpu_to_le16(0x0200),
+ 	.bDeviceClass =	USB_CLASS_VENDOR_SPEC,
+-	.idVendor = __constant_cpu_to_le16(DRIVER_VENDOR_ID),
+-	.idProduct = __constant_cpu_to_le16(DRIVER_PRODUCT_ID),
++	.idVendor = cpu_to_le16(DRIVER_VENDOR_ID),
++	.idProduct = cpu_to_le16(DRIVER_PRODUCT_ID),
+ 	.bNumConfigurations = 1,
+ };
+ 
+@@ -251,7 +251,7 @@ static int dbgp_configure_endpoints(struct usb_gadget *gadget)
+ 
+ 	dbgp.i_ep->driver_data = gadget;
+ 	i_desc.wMaxPacketSize =
+-		__constant_cpu_to_le16(USB_DEBUG_MAX_PACKET_SIZE);
++		cpu_to_le16(USB_DEBUG_MAX_PACKET_SIZE);
+ 
+ 	dbgp.o_ep = usb_ep_autoconfig(gadget, &o_desc);
+ 	if (!dbgp.o_ep) {
+@@ -262,7 +262,7 @@ static int dbgp_configure_endpoints(struct usb_gadget *gadget)
+ 
+ 	dbgp.o_ep->driver_data = gadget;
+ 	o_desc.wMaxPacketSize =
+-		__constant_cpu_to_le16(USB_DEBUG_MAX_PACKET_SIZE);
++		cpu_to_le16(USB_DEBUG_MAX_PACKET_SIZE);
+ 
+ 	dbg_desc.bDebugInEndpoint = i_desc.bEndpointAddress;
+ 	dbg_desc.bDebugOutEndpoint = o_desc.bEndpointAddress;
+diff --git a/drivers/usb/gadget/legacy/gmidi.c b/drivers/usb/gadget/legacy/gmidi.c
+index da19c486b61e3..650568de0de3e 100644
+--- a/drivers/usb/gadget/legacy/gmidi.c
++++ b/drivers/usb/gadget/legacy/gmidi.c
+@@ -88,10 +88,10 @@ MODULE_PARM_DESC(out_ports, "Number of MIDI output ports");
+ static struct usb_device_descriptor device_desc = {
+ 	.bLength =		USB_DT_DEVICE_SIZE,
+ 	.bDescriptorType =	USB_DT_DEVICE,
+-	.bcdUSB =		__constant_cpu_to_le16(0x0200),
++	.bcdUSB =		cpu_to_le16(0x0200),
+ 	.bDeviceClass =		USB_CLASS_PER_INTERFACE,
+-	.idVendor =		__constant_cpu_to_le16(DRIVER_VENDOR_NUM),
+-	.idProduct =		__constant_cpu_to_le16(DRIVER_PRODUCT_NUM),
++	.idVendor =		cpu_to_le16(DRIVER_VENDOR_NUM),
++	.idProduct =		cpu_to_le16(DRIVER_PRODUCT_NUM),
+ 	/* .iManufacturer =	DYNAMIC */
+ 	/* .iProduct =		DYNAMIC */
+ 	.bNumConfigurations =	1,
+diff --git a/drivers/usb/gadget/legacy/nokia.c b/drivers/usb/gadget/legacy/nokia.c
+index e3791b9199962..8902f454b7bcf 100644
+--- a/drivers/usb/gadget/legacy/nokia.c
++++ b/drivers/usb/gadget/legacy/nokia.c
+@@ -90,10 +90,10 @@ static struct usb_gadget_strings *dev_strings[] = {
+ static struct usb_device_descriptor device_desc = {
+ 	.bLength		= USB_DT_DEVICE_SIZE,
+ 	.bDescriptorType	= USB_DT_DEVICE,
+-	.bcdUSB			= __constant_cpu_to_le16(0x0200),
++	.bcdUSB			= cpu_to_le16(0x0200),
+ 	.bDeviceClass		= USB_CLASS_COMM,
+-	.idVendor		= __constant_cpu_to_le16(NOKIA_VENDOR_ID),
+-	.idProduct		= __constant_cpu_to_le16(NOKIA_PRODUCT_ID),
++	.idVendor		= cpu_to_le16(NOKIA_VENDOR_ID),
++	.idProduct		= cpu_to_le16(NOKIA_PRODUCT_ID),
+ 	.bcdDevice		= cpu_to_le16(NOKIA_VERSION_NUM),
+ 	/* .iManufacturer = DYNAMIC */
+ 	/* .iProduct = DYNAMIC */

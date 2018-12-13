@@ -1,0 +1,38 @@
+From f35fe4beb03d4e3203a2bd734d2253060694d98f Mon Sep 17 00:00:00 2001
+From: "Felipe F. Tonello" <eu@felipetonello.com>
+Date: Fri, 18 Sep 2015 18:36:28 +0100
+Subject: [PATCH] usb: gadget: f_midi: check for error on usb_ep_queue
+
+f_midi is not checking whether there is an error on usb_ep_queue
+request, ignoring potential problems, such as memory leaks.
+
+Signed-off-by: Felipe F. Tonello <eu@felipetonello.com>
+Signed-off-by: Felipe Balbi <balbi@ti.com>
+---
+ drivers/usb/gadget/function/f_midi.c | 12 +++++++++---
+ 1 file changed, 9 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/usb/gadget/function/f_midi.c b/drivers/usb/gadget/function/f_midi.c
+index a287a48292731..9fc86d90c7bd1 100644
+--- a/drivers/usb/gadget/function/f_midi.c
++++ b/drivers/usb/gadget/function/f_midi.c
+@@ -547,10 +547,16 @@ static void f_midi_transmit(struct f_midi *midi, struct usb_request *req)
+ 		}
+ 	}
+ 
+-	if (req->length > 0)
+-		usb_ep_queue(ep, req, GFP_ATOMIC);
+-	else
++	if (req->length > 0) {
++		int err;
++
++		err = usb_ep_queue(ep, req, GFP_ATOMIC);
++		if (err < 0)
++			ERROR(midi, "%s queue req: %d\n",
++			      midi->in_ep->name, err);
++	} else {
+ 		free_ep_req(ep, req);
++	}
+ }
+ 
+ static void f_midi_in_tasklet(unsigned long data)
