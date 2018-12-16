@@ -39,13 +39,13 @@
 - License: MIT
 - Version: 5.3.4
 - Website: [The Programming Language Lua](https://www.lua.org/)
-- Source code [mpg123-1.25.0.tar.bz2](https://github.com/korginc/EK-50_OSS/blob/master/libs/mpg123-1.25.0.tar.bz2)
+- Source code [mpg123-1.25.0.tar.bz2](https://github.com/korginc/EK-50_OSS/blob/master/libs/lua-5.3.4.tar.gz)
 
 ### Tools and Applications
 #### busybox
 - License: GPL-2.0
 - Version: 1.25.1
-- WebSite: [BusyBox](https://www.busybox.net/)
+- Website: [BusyBox](https://www.busybox.net/)
 - Source code [busybox-1.25.1.tar.gz](https://github.com/korginc/EK-50_OSS/blob/master/tools/busybox-1.25.1.tar.gz)
 - .config file [busybox.config](https://github.com/korginc/EK-50_OSS/blob/master/tools/busybox.config)
 
