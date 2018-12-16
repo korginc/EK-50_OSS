@@ -39,7 +39,7 @@
 - License: MIT
 - Version: 5.3.4
 - Website: [The Programming Language Lua](https://www.lua.org/)
-- Source code [mpg123-1.25.0.tar.bz2](https://github.com/korginc/EK-50_OSS/blob/master/libs/lua-5.3.4.tar.gz)
+- Source code [lua-5.3.4.tar.gz](https://github.com/korginc/EK-50_OSS/blob/master/libs/lua-5.3.4.tar.gz)
 
 ### Tools and Applications
 #### busybox
